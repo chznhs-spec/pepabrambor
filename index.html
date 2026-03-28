@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kolik má Pepa brambor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f1ea;
+            color: #333;
+            text-align: center;
+        }
+
+        .obsah {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        h1 { font-size: 2.5rem; margin-bottom: 0; }
+        
+        #cislo {
+            font-size: 9rem;
+            font-weight: 900;
+            color: #8b4513;
+            text-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+            margin: 10px 0;
+        }
+
+        .jednotka { font-size: 2.2rem; font-weight: 300; margin-bottom: 40px; letter-spacing: 2px; }
+
+        .historie-box {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 350px;
+        }
+
+        h2 { font-size: 1rem; color: #888; text-transform: uppercase; margin-top: 0; }
+
+        .historie-radek {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 1.1rem;
+        }
+
+        .historie-radek:last-child { border-bottom: none; }
+
+        .trend-up { color: #2ecc71; font-size: 0.8rem; }
+        .trend-down { color: #e74c3c; font-size: 0.8rem; }
+
+        footer {
+            padding: 30px;
+            font-size: 0.85rem;
+            color: #777;
+            background: #fff;
+            width: 100%;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        a { color: #d35400; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="obsah">
+        <h1>Pepa má právě</h1>
+        <div id="cislo">...</div>
+        <div class="jednotka">Brambor</div>
+
+        <div class="historie-box">
+            <h2>Historie kvanta Brambor</h2>
+            <div id="historie-seznam"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Tuto unikátní metodiku výpočtu vám přináší studentská iniciativa<br>
+        <strong>Vzdělaný lid České republiky</strong></p>
+        <p><a href="http://www.vzdelanylid.cz" target="_blank">www.vzdelanylid.cz</a></p>
+    </footer>
+
+    <script>
+        // "Sůl" – náhodný řetězec, který zamíchá výsledky, aby byly nepředvídatelné
+        const SALT = "BramborovySalat_2024_ExtraRandom_99";
+
+        // Funkce pro "vysokou náhodnost" založenou na čase
+        function ziskejBrambory(datum) {
+            const id = datum.getFullYear().toString() + datum.getMonth() + datum.getDate() + datum.getHours();
+            const rande = id + SALT;
+            
+            // Algoritmus cyklického posunu (podobný hashovacím funkcím)
+            let hash = 0;
+            for (let i = 0; i < rande.length; i++) {
+                const char = rande.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Převod na 32bit integer
+            }
+            
+            // Použijeme sinus pro ještě větší rozbití posloupnosti (chaos)
+            const chaos = Math.abs(Math.sin(hash) * 10000);
+            return Math.floor(chaos % 201); // Rozsah 0 - 200 brambor
+        }
+
+        const ted = new Date();
+        const aktualniPocet = ziskejBrambory(ted);
+        document.getElementById('cislo').innerText = aktualniPocet;
+
+        const historieContainer = document.getElementById('historie-seznam');
+        
+        for (let i = 1; i <= 5; i++) {
+            const hCas = new Date(ted.getTime() - (i * 60 * 60 * 1000));
+            const hPocet = ziskejBrambory(hCas);
+            const hPocetPred = ziskejBrambory(new Date(hCas.getTime() - (60 * 60 * 1000)));
+            
+            const trend = hPocet > hPocetPred 
+                ? '<span class="trend-up">▲ PŘÍRŮSTEK</span>' 
+                : '<span class="trend-down">▼ ÚBYTEK</span>';
+
+            const hodina = hCas.getHours().toString().padStart(2, '0') + ":00";
+
+            const radek = document.createElement('div');
+            radek.className = 'historie-radek';
+            radek.innerHTML = `
+                <div>
+                    <strong>${hodina}</strong><br>${trend}
+                </div>
+                <div style="font-weight: 900; font-size: 1.4rem;">${hPocet} <small style="font-size: 0.7rem; font-weight: 400;">ks</small></div>
+            `;
+            historieContainer.appendChild(radek);
+        }
+    </script>
+
+</body>
+</html>
