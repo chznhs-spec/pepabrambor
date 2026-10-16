@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Věštba</title>
+</head>
+<body style="background-color: #ffffff; color: #000000; font-family: sans-serif; margin: 40px;">
+
+    <h1>Bramborový Předvídač</h1>
+    <hr>
+
+    <p>Aktuální počet brambor: <strong id="cislo" style="font-size: 1.2em;">--</strong></p>
+
+
+    <h2>1. Zjistit brambory podle času</h2>
+    <p>Zadejte datum a čas:</p>
+    <input type="datetime-local" id="input-cas">
+    <button onclick="predikujPodleCasu()">Spočítat</button>
+    <p id="vysledek-cas" style="font-weight: bold;"></p>
+
+    <br>
+    <hr>
+
+    <h2>2. Najít čas podle hodnoty brambor</h2>
+    <p>Zadejte požadovaný počet brambor (0 - 200):</p>
+    <input type="number" id="input-hodnota" min="0" max="200" placeholder="např. 142">
+    <button onclick="predikujPodleHodnoty()">Hledat</button>
+    <p id="vysledek-hodnota" style="font-weight: bold;"></p>
+
+    <script>
+        // "Sůl" – náhodný řetězec, který zamíchá výsledky, aby byly nepředvídatelné
+        const SALT = "BramborovySalat_2024_ExtraRandom_99";
+
+        // Funkce pro "vysokou náhodnost" založenou na čase
+        function ziskejBrambory(datum) {
+            const id = datum.getFullYear().toString() + datum.getMonth() + datum.getDate() + datum.getHours();
+            const rande = id + SALT;
+            
+            // Algoritmus cyklického posunu (podobný hashovacím funkcím)
+            let hash = 0;
+            for (let i = 0; i < rande.length; i++) {
+                const char = rande.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Převod na 32bit integer
+            }
+            
+            // Použijeme sinus pro ještě větší rozbití posloupnosti (chaos)
+            const chaos = Math.abs(Math.sin(hash) * 10000);
+            return Math.floor(chaos % 201); // Rozsah 0 - 200 brambor
+        }
+
+        const ted = new Date();
+        const aktualniPocet = ziskejBrambory(ted);
+        document.getElementById('cislo').innerText = aktualniPocet;
+
+        // Nastavení výchozí hodnoty pro input času
+        function formatDateTimeLocal(d) {
+            const pad = (n) => n.toString().padStart(2, '0');
+            return d.getFullYear() + '-' +
+                pad(d.getMonth() + 1) + '-' +
+                pad(d.getDate()) + 'T' +
+                pad(d.getHours()) + ':' +
+                pad(d.getMinutes());
+        }
+        document.getElementById('input-cas').value = formatDateTimeLocal(ted);
+
+        const historieContainer = document.getElementById('historie-seznam');
+        
+        // Zobrazení příštích 5 hodin namísto minulosti
+        for (let i = 1; i <= 5; i++) {
+            const hCas = new Date(ted.getTime() + (i * 60 * 60 * 1000));
+            const hPocet = ziskejBrambory(hCas);
+            const hPocetPred = ziskejBrambory(new Date(hCas.getTime() - (60 * 60 * 1000)));
+            
+            const trend = hPocet > hPocetPred 
+                ? '<span style="color: green;">▲ PŘÍRŮSTEK</span>' 
+                : '<span style="color: red;">▼ ÚBYTEK</span>';
+
+            const hodina = hCas.getHours().toString().padStart(2, '0') + ":00 (" + hCas.toLocaleDateString('cs-CZ') + ")";
+
+            const radek = document.createElement('div');
+            radek.style.margin = "8px 0";
+            radek.innerHTML = `
+                <div>
+                    <strong>${hodina}</strong> - ${trend} : <span style="font-weight: 900; font-size: 1.2rem;">${hPocet}</span> ks
+                </div>
+            `;
+            historieContainer.appendChild(radek);
+        }
+
+        // Funkce pro Mód A (Zadej Čas)
+        function predikujPodleCasu() {
+            const val = document.getElementById('input-cas').value;
+            if (!val) return;
+
+            const zvolenyCas = new Date(val);
+            const vysledekPocet = ziskejBrambory(zvolenyCas);
+
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            const formatovanyCas = zvolenyCas.toLocaleDateString('cs-CZ', options);
+
+            document.getElementById('vysledek-cas').innerText = 
+                `V čase (${formatovanyCas}) bude hodnota: ${vysledekPocet} ks brambor.`;
+        }
+
+        // Funkce pro Mód B (Zadej Hodnotu)
+        function predikujPodleHodnoty() {
+            const inputVal = parseInt(document.getElementById('input-hodnota').value);
+            
+            if (isNaN(inputVal) || inputVal < 0 || inputVal > 200) {
+                document.getElementById('vysledek-hodnota').innerText = "Zadejte platné číslo v rozsahu 0 až 200.";
+                return;
+            }
+
+            const now = new Date();
+            const nowMs = now.getTime();
+            const hodinaMs = 60 * 60 * 1000;
+            const maxHodinBudoucnost = 30 * 24; // Hledat až 30 dní dopředu v budoucnosti
+
+            let prvniBuduciCas = null;
+
+            // Hledáme VÝHRADNĚ OD TEĎ DOPŘEDU (+0 až +720 hodin)
+            for (let i = 0; i <= maxHodinBudoucnost; i++) {
+                const testovanyCas = new Date(nowMs + (i * hodinaMs));
+                const spocitanaHodnota = ziskejBrambory(testovanyCas);
+
+                if (spocitanaHodnota === inputVal) {
+                    prvniBuduciCas = testovanyCas;
+                    break; // Našli jsme nejbližší BUDOUCÍ čas
+                }
+            }
+
+            const elVysledek = document.getElementById('vysledek-hodnota');
+            if (prvniBuduciCas) {
+                const options = { weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+                const casStr = prvniBuduciCas.toLocaleDateString('cs-CZ', options);
+                
+                const diffHours = Math.round((prvniBuduciCas.getTime() - nowMs) / hodinaMs);
+                let info = "";
+                if (diffHours === 0) {
+                    info = " (aktuálně)";
+                } else if (diffHours < 24) {
+                    info = ` (za cca ${diffHours} h)`;
+                } else {
+                    const dni = Math.floor(diffHours / 24);
+                    const zbylEHodiny = diffHours % 24;
+                    info = ` (za ${dni} dní a ${zbylEHodiny} h)`;
+                }
+
+                elVysledek.innerText = `Hodnoty ${inputVal} ks bude dosaženo: ${casStr}${info}`;
+            } else {
+                elVysledek.innerText = `V příštích 30 dnech nebyla hodnota ${inputVal} ks nalezena.`;
+            }
+        }
+    </script>
+</body>
+</html>
